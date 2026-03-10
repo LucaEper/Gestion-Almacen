@@ -16,291 +16,264 @@
   input{-webkit-appearance:none}
   ::-webkit-scrollbar{width:0}
   @keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
-  @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
 </style>
 </head>
 <body>
 <div id="root"></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
-<script>
-var _w=console.warn;console.warn=function(){if(arguments[0]&&typeof arguments[0]==='string'&&arguments[0].indexOf('in-browser Babel')!==-1)return;_w.apply(console,arguments);};
-</script>
+<script>var _w=console.warn;console.warn=function(){if(arguments[0]&&typeof arguments[0]==='string'&&arguments[0].indexOf('in-browser Babel')!==-1)return;_w.apply(console,arguments);};</script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
 <script type="text/babel">
 const { useState, useRef, useCallback, useEffect } = React;
 
-// ═══ WEBHOOK URL ═══
 const WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbzc38fJ403omFab8xWHkNDG5vR8kaiGk9BC5sA7H4iDID_NzQE9NvDCad-NWHzAKWr6Ig/exec";
 
 const PHOTO_REQUIREMENTS = {
-  multiple: { label: "1 bulto o más", photos: ["Foto bulto #{n}"] },
-  external: { label: "Transporte externo", photos: ["Foto de la matrícula", "Foto del precinto"] },
-  fragile: { label: "Mercancía frágil", photos: ["Foto del embalaje interior"] },
-  export: { label: "Exportación", photos: ["Foto del packing list", "Foto documentación aduanera"] },
+  multiple:{label:"1 bulto o más",photos:["Foto bulto #{n}"]},
+  external:{label:"Transporte externo",photos:["Foto de la matrícula","Foto del precinto"]},
+  fragile:{label:"Mercancía frágil",photos:["Foto del embalaje interior"]},
+  export:{label:"Exportación",photos:["Foto del packing list","Foto documentación aduanera"]},
 };
 
-const generateId = () => Math.random().toString(36).substr(2, 9);
-const pad2 = (n) => String(n).padStart(2, "0");
-const pad3 = (n) => String(n).padStart(3, "0");
-const formatDate = (d) => pad2(d.getDate())+"-"+pad2(d.getMonth()+1)+"-"+d.getFullYear();
-const formatTime = (d) => pad2(d.getHours())+":"+pad2(d.getMinutes())+":"+pad2(d.getSeconds());
-const formatTimeShort = (d) => pad2(d.getHours())+"-"+pad2(d.getMinutes());
+const generateId=()=>Math.random().toString(36).substr(2,9);
+const pad2=(n)=>String(n).padStart(2,"0");
+const pad3=(n)=>String(n).padStart(3,"0");
+const formatDate=(d)=>pad2(d.getDate())+"-"+pad2(d.getMonth()+1)+"-"+d.getFullYear();
+const formatTime=(d)=>pad2(d.getHours())+":"+pad2(d.getMinutes())+":"+pad2(d.getSeconds());
+const formatTimeShort=(d)=>pad2(d.getHours())+"-"+pad2(d.getMinutes());
 
-const IconCamera = () => <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>;
-const IconCheck = () => <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>;
-const IconFolder = () => <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>;
-const IconArrow = () => <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>;
-const IconBack = () => <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>;
-const IconRefresh = () => <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>;
-const IconImage = () => <svg width="48" height="48" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>;
-const IconUser = () => <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>;
-const IconTruck = () => <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>;
-const IconPdf = () => <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>;
-const IconPlate = () => <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><rect x="1" y="6" width="22" height="12" rx="3"/><line x1="5" y1="12" x2="5.01" y2="12"/><line x1="19" y1="12" x2="19.01" y2="12"/></svg>;
-const IconPlus = () => <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>;
-const IconList = () => <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>;
-const IconDownload = () => <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>;
-const IconCloud = () => <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0018 9h-1.26A8 8 0 103 16.3"/></svg>;
-const IconSpinner = () => <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" viewBox="0 0 24 24" style={{animation:"spin 1s linear infinite"}}><path d="M21 12a9 9 0 11-6.219-8.56"/></svg>;
-const IconAlert = () => <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>;
-
-const mono = "'Courier New','SF Mono',monospace";
-const C = {bg:"#0a0f1a",surface:"#111827",surfaceLight:"#1a2236",border:"#1e2d4a",accent:"#f59e0b",accentDark:"#b45309",accentLight:"#fbbf24",success:"#10b981",danger:"#ef4444",info:"#3b82f6",text:"#e2e8f0",textMuted:"#8899b4",textDim:"#5a6d8a"};
-const bb = {border:"none",borderRadius:"10px",cursor:"pointer",fontFamily:"inherit",fontWeight:600,transition:"all 0.2s ease",display:"flex",alignItems:"center",justifyContent:"center",gap:"8px"};
-
-// ═══ PDF/Informe HTML generation ═══
-function makeInformeHtml(s) {
-  const photos = Object.entries(s.photos).map(([k,url])=>'<div style="break-inside:avoid;margin-bottom:8px"><img src="'+url+'" style="width:100%;max-height:220px;object-fit:contain;border:1px solid #ddd;border-radius:6px"/><p style="font-size:10px;color:#666;margin:4px 0 0;text-align:center">'+(s.photoLabels[k]||k)+'</p></div>').join("");
-  const tipo = s.tipoProceso==="empaquetamiento"?"Empaquetamiento":"Transporte";
-  const modo = s.modoBulto==="nuevo"?"Bulto nuevo":"Ampliación de información";
-  return '<!DOCTYPE html><html><head><meta charset="utf-8"/><title>Informe '+s.codigoInterno+' - '+s.bultoName+'</title><style>@page{size:A4;margin:20mm}body{font-family:Segoe UI,system-ui,sans-serif;color:#1a1a2e;margin:0;font-size:13px;line-height:1.5}.hd{background:linear-gradient(135deg,#f59e0b,#b45309);color:#fff;padding:24px 28px;border-radius:0 0 12px 12px}.hd h1{margin:0;font-size:22px;font-weight:800}.hd p{margin:6px 0 0;font-size:13px;opacity:.85}.bdg{display:inline-block;background:rgba(255,255,255,.2);padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;margin-top:8px;margin-right:6px}.ct{padding:24px 28px}.sc{margin-bottom:20px}.st{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#6b7280;font-weight:700;margin:0 0 10px;padding-bottom:6px;border-bottom:2px solid #f3f4f6}table{width:100%;border-collapse:collapse}td{padding:8px 12px;border-bottom:1px solid #f3f4f6;vertical-align:top}td:first-child{font-weight:600;color:#6b7280;width:160px;font-size:12px;text-transform:uppercase;letter-spacing:.03em}.pg{display:grid;grid-template-columns:1fr 1fr;gap:10px}.fp{background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px 14px;font-family:Courier New,monospace;font-size:12px;color:#475569}.ft{text-align:center;padding:20px;font-size:10px;color:#9ca3af;border-top:1px solid #f3f4f6;margin-top:20px}.mb{background:#fef3c7;border:2px solid #f59e0b;border-radius:8px;padding:6px 16px;display:inline-block;font-family:Courier New,monospace;font-size:18px;font-weight:800;letter-spacing:.1em;color:#92400e}.print-btn{display:block;margin:20px auto;padding:12px 32px;background:#f59e0b;color:#000;border:none;border-radius:8px;font-size:16px;font-weight:700;cursor:pointer}@media print{.print-btn{display:none!important}}</style></head><body><div class="hd"><h1>Informe de '+tipo+'</h1><p>'+s.codigoInterno+' — '+s.bultoName+' — '+s.fecha+' '+s.hora+'</p><span class="bdg">'+modo+'</span><span class="bdg">'+s.opciones.join(" · ")+'</span></div><div class="ct"><div class="sc"><div class="st">Datos del registro</div><table><tr><td>Código interno</td><td><strong style="font-size:15px;color:#b45309">'+s.codigoInterno+'</strong></td></tr><tr><td>Proceso</td><td>'+tipo+'</td></tr><tr><td>Bulto</td><td><strong>'+s.bultoName+'</strong> ('+modo+')</td></tr><tr><td>Opciones</td><td>'+s.opciones.join(", ")+'</td></tr><tr><td>Operario</td><td>'+s.usuario+'</td></tr><tr><td>Transportista</td><td>'+s.transportista+'</td></tr>'+(s.matricula?'<tr><td>Matrícula</td><td><div class="mb">'+s.matricula+'</div></td></tr>':'')+'<tr><td>Fecha</td><td>'+s.fecha+'</td></tr><tr><td>Hora</td><td>'+s.hora+'</td></tr><tr><td>Nº de fotos</td><td>'+Object.keys(s.photos).length+'</td></tr></table></div><div class="sc"><div class="st">Estructura de archivos</div><div class="fp">'+s.folderPath+'</div></div><div class="sc"><div class="st">Fotos capturadas ('+Object.keys(s.photos).length+')</div><div class="pg">'+photos+'</div></div></div><button class="print-btn" onclick="window.print()">Imprimir / Guardar como PDF</button><div class="ft">Documento generado — Gestión Almacén v1.0<br/>'+s.fecha+' '+s.hora+' — '+s.usuario+'</div></body></html>';
-}
-
-// ═══ Enviar a SharePoint via webhook ═══
-async function enviarASharePoint(session) {
-  const fotos = Object.entries(session.photos).map(([key, dataUrl]) => ({
-    nombre: (session.photoLabels[key] || key).replace(/[^a-zA-Z0-9áéíóúñÁÉÍÓÚÑ ._-]/g, "") + ".jpg",
-    contenido: dataUrl
-  }));
-
-  const informe = makeInformeHtml(session);
-  const cleanPath = session.folderPath.replace(/📁\s*/g,"").replace(/^\s*\//, "").replace(/\/\s*$/, "").trim();
-
-  const payload = {
-    codigoInterno: session.codigoInterno,
-    tipoProceso: session.tipoProceso,
-    bultoName: session.bultoName,
-    modoBulto: session.modoBulto,
-    opciones: session.opciones.join(", "),
-    usuario: session.usuario,
-    transportista: session.transportista,
-    matricula: session.matricula,
-    fecha: session.fecha,
-    hora: session.hora,
-    folderPath: cleanPath,
-    numFotos: fotos.length,
-    informe: informe,
-    fotos: fotos
-  };
-
-  const response = await fetch(WEBHOOK_URL, {
-    method: "POST",
-    mode: "no-cors",
-    headers: { "Content-Type": "text/plain" },
-    body: JSON.stringify(payload),
-    redirect: "follow"
-  });
-
-  // Con mode: no-cors no podemos leer la respuesta,
-  // pero si no hubo error de red, los datos se enviaron
-  return { status: "ok" };
-}
-
-function descargarInforme(s) {
-  const html = makeInformeHtml(s);
-  const fileName = "Informe_" + s.codigoInterno + "_" + s.bultoName + "_" + s.fecha + ".html";
-  if (navigator.share && navigator.canShare) {
-    const file = new File([html], fileName, { type: "text/html" });
-    if (navigator.canShare({ files: [file] })) {
-      navigator.share({ title: "Informe " + s.codigoInterno, files: [file] }).catch(() => dlFallback(html, fileName));
-      return;
+// ═══ JSONP fetch (evita CORS con Google Apps Script) ═══
+function fetchJsonp(url) {
+  return new Promise((resolve, reject) => {
+    const cbName = "jsonp_" + Date.now() + "_" + Math.random().toString(36).substr(2);
+    const script = document.createElement("script");
+    const timeout = setTimeout(() => {
+      reject(new Error("Timeout")); cleanup();
+    }, 30000);
+    function cleanup() {
+      clearTimeout(timeout); delete window[cbName];
+      if (script.parentNode) script.parentNode.removeChild(script);
     }
+    window[cbName] = function(data) { resolve(data); cleanup(); };
+    script.onerror = function() { reject(new Error("JSONP error")); cleanup(); };
+    script.src = url + (url.includes("?") ? "&" : "?") + "callback=" + cbName;
+    document.body.appendChild(script);
+  });
+}
+
+// ═══ Consultar bultos existentes en SharePoint ═══
+async function fetchBultosFromSharePoint(codigoInterno, tipoProceso) {
+  const tipo = tipoProceso === "empaquetamiento" ? "Empaquetamiento" : "Transporte";
+  const path = codigoInterno + "/" + tipo;
+  try {
+    const data = await fetchJsonp(WEBHOOK_URL + "?action=list&path=" + encodeURIComponent(path));
+    if (data.status === "ok" && data.folders) {
+      return data.folders
+        .filter(f => f.name.startsWith("Bulto-"))
+        .sort((a, b) => a.name.localeCompare(b.name))
+        .map(f => ({
+          id: f.name,
+          number: parseInt(f.name.replace("Bulto-", "")) || 0,
+          name: f.name,
+          date: f.created ? new Date(f.created).toLocaleDateString("es-ES") : "",
+          records: new Array(f.childCount || 0).fill(null),
+        }));
+    }
+    return [];
+  } catch (e) {
+    console.error("Error fetching bultos:", e);
+    return [];
   }
-  dlFallback(html, fileName);
-}
-function dlFallback(html, fn) {
-  const b = new Blob([html],{type:"text/html"}); const u = URL.createObjectURL(b);
-  const a = document.createElement("a"); a.href=u; a.download=fn; a.style.display="none";
-  document.body.appendChild(a); a.click();
-  setTimeout(()=>{document.body.removeChild(a);URL.revokeObjectURL(u);},200);
 }
 
-function App() {
-  const [step, setStep] = useState("login");
-  const [usuario, setUsuario] = useState("");
-  const [codigoInterno, setCodigoInterno] = useState("");
-  const [tipoProceso, setTipoProceso] = useState("");
-  const [modoBulto, setModoBulto] = useState("");
-  const [selectedBulto, setSelectedBulto] = useState(null);
-  const [opciones, setOpciones] = useState([]);
-  const [bultoCount, setBultoCount] = useState(1);
-  const [transportista, setTransportista] = useState("");
-  const [matricula, setMatricula] = useState("");
-  const [photoQueue, setPhotoQueue] = useState([]);
-  const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
-  const [capturedPhotos, setCapturedPhotos] = useState({});
-  const [photoLabels, setPhotoLabels] = useState({});
-  const [completedSessions, setCompletedSessions] = useState([]);
-  const [animateIn, setAnimateIn] = useState(true);
-  const [bultoRegistry, setBultoRegistry] = useState({});
-  const [uploadStatus, setUploadStatus] = useState("idle"); // idle | uploading | ok | error
-  const [uploadMsg, setUploadMsg] = useState("");
-  const videoRef = useRef(null);
-  const streamRef = useRef(null);
-  const canvasRef = useRef(null);
+const IconCamera=()=><svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>;
+const IconCheck=()=><svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>;
+const IconFolder=()=><svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>;
+const IconArrow=()=><svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>;
+const IconBack=()=><svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>;
+const IconRefresh=()=><svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>;
+const IconImage=()=><svg width="48" height="48" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>;
+const IconUser=()=><svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>;
+const IconTruck=()=><svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>;
+const IconPlate=()=><svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><rect x="1" y="6" width="22" height="12" rx="3"/><line x1="5" y1="12" x2="5.01" y2="12"/><line x1="19" y1="12" x2="19.01" y2="12"/></svg>;
+const IconPlus=()=><svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>;
+const IconList=()=><svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>;
+const IconDownload=()=><svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>;
+const IconCloud=()=><svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0018 9h-1.26A8 8 0 103 16.3"/></svg>;
+const IconSpinner=()=><svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" viewBox="0 0 24 24" style={{animation:"spin 1s linear infinite"}}><path d="M21 12a9 9 0 11-6.219-8.56"/></svg>;
+const IconAlert=()=><svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>;
 
-  const anim = (next) => {setAnimateIn(false);setTimeout(()=>{setStep(next);setAnimateIn(true);},200);};
-  const registryKey = codigoInterno+"_"+tipoProceso;
-  const currentBultos = bultoRegistry[registryKey]||[];
+const mono="'Courier New','SF Mono',monospace";
+const C={bg:"#0a0f1a",surface:"#111827",surfaceLight:"#1a2236",border:"#1e2d4a",accent:"#f59e0b",accentDark:"#b45309",accentLight:"#fbbf24",success:"#10b981",danger:"#ef4444",info:"#3b82f6",text:"#e2e8f0",textMuted:"#8899b4",textDim:"#5a6d8a"};
+const bb={border:"none",borderRadius:"10px",cursor:"pointer",fontFamily:"inherit",fontWeight:600,transition:"all 0.2s ease",display:"flex",alignItems:"center",justifyContent:"center",gap:"8px"};
 
-  const createNewBulto = () => {
-    const num = currentBultos.length+1; const now = new Date();
-    const bulto = {id:generateId(),number:num,name:"Bulto-"+pad3(num),date:formatDate(now),records:[]};
+function makeInformeHtml(s){const photos=Object.entries(s.photos).map(([k,url])=>'<div style="break-inside:avoid;margin-bottom:8px"><img src="'+url+'" style="width:100%;max-height:220px;object-fit:contain;border:1px solid #ddd;border-radius:6px"/><p style="font-size:10px;color:#666;margin:4px 0 0;text-align:center">'+(s.photoLabels[k]||k)+'</p></div>').join("");const tipo=s.tipoProceso==="empaquetamiento"?"Empaquetamiento":"Transporte";const modo=s.modoBulto==="nuevo"?"Bulto nuevo":"Ampliación";return '<!DOCTYPE html><html><head><meta charset="utf-8"/><title>Informe '+s.codigoInterno+'</title><style>@page{size:A4;margin:20mm}body{font-family:Segoe UI,system-ui,sans-serif;color:#1a1a2e;margin:0;font-size:13px;line-height:1.5}.hd{background:linear-gradient(135deg,#f59e0b,#b45309);color:#fff;padding:24px 28px;border-radius:0 0 12px 12px}.hd h1{margin:0;font-size:22px;font-weight:800}.hd p{margin:6px 0 0;font-size:13px;opacity:.85}.bdg{display:inline-block;background:rgba(255,255,255,.2);padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;margin-top:8px;margin-right:6px}.ct{padding:24px 28px}.sc{margin-bottom:20px}.st{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#6b7280;font-weight:700;margin:0 0 10px;padding-bottom:6px;border-bottom:2px solid #f3f4f6}table{width:100%;border-collapse:collapse}td{padding:8px 12px;border-bottom:1px solid #f3f4f6;vertical-align:top}td:first-child{font-weight:600;color:#6b7280;width:160px;font-size:12px;text-transform:uppercase;letter-spacing:.03em}.pg{display:grid;grid-template-columns:1fr 1fr;gap:10px}.mb{background:#fef3c7;border:2px solid #f59e0b;border-radius:8px;padding:6px 16px;display:inline-block;font-family:Courier New,monospace;font-size:18px;font-weight:800;letter-spacing:.1em;color:#92400e}.print-btn{display:block;margin:20px auto;padding:12px 32px;background:#f59e0b;color:#000;border:none;border-radius:8px;font-size:16px;font-weight:700;cursor:pointer}@media print{.print-btn{display:none!important}}</style></head><body><div class="hd"><h1>Informe de '+tipo+'</h1><p>'+s.codigoInterno+' — '+s.bultoName+' — '+s.fecha+' '+s.hora+'</p><span class="bdg">'+modo+'</span><span class="bdg">'+s.opciones.join(" · ")+'</span></div><div class="ct"><div class="sc"><div class="st">Datos del registro</div><table><tr><td>Código interno</td><td><strong style="font-size:15px;color:#b45309">'+s.codigoInterno+'</strong></td></tr><tr><td>Proceso</td><td>'+tipo+'</td></tr><tr><td>Bulto</td><td><strong>'+s.bultoName+'</strong> ('+modo+')</td></tr><tr><td>Opciones</td><td>'+s.opciones.join(", ")+'</td></tr><tr><td>Operario</td><td>'+s.usuario+'</td></tr><tr><td>Transportista</td><td>'+s.transportista+'</td></tr>'+(s.matricula?'<tr><td>Matrícula</td><td><div class="mb">'+s.matricula+'</div></td></tr>':'')+'<tr><td>Fecha</td><td>'+s.fecha+'</td></tr><tr><td>Hora</td><td>'+s.hora+'</td></tr><tr><td>Nº de fotos</td><td>'+Object.keys(s.photos).length+'</td></tr></table></div><div class="sc"><div class="st">Fotos capturadas ('+Object.keys(s.photos).length+')</div><div class="pg">'+photos+'</div></div></div><button class="print-btn" onclick="window.print()">Imprimir / Guardar como PDF</button></body></html>';}
+
+async function enviarASharePoint(session){const fotos=Object.entries(session.photos).map(([key,dataUrl])=>({nombre:(session.photoLabels[key]||key).replace(/[^a-zA-Z0-9áéíóúñÁÉÍÓÚÑ ._-]/g,"")+".jpg",contenido:dataUrl}));const informe=makeInformeHtml(session);const payload={codigoInterno:session.codigoInterno,tipoProceso:session.tipoProceso,bultoName:session.bultoName,modoBulto:session.modoBulto,opciones:session.opciones.join(", "),usuario:session.usuario,transportista:session.transportista,matricula:session.matricula,fecha:session.fecha,hora:session.hora,folderPath:session.folderPath,numFotos:fotos.length,informe:informe,fotos:fotos};await fetch(WEBHOOK_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain"},body:JSON.stringify(payload),redirect:"follow"});return{status:"ok"};}
+
+function descargarInforme(s){const html=makeInformeHtml(s);const fn="Informe_"+s.codigoInterno+"_"+s.bultoName+"_"+s.fecha+".html";if(navigator.share&&navigator.canShare){const file=new File([html],fn,{type:"text/html"});if(navigator.canShare({files:[file]})){navigator.share({title:"Informe "+s.codigoInterno,files:[file]}).catch(()=>dlFb(html,fn));return;}}dlFb(html,fn);}
+function dlFb(h,fn){const b=new Blob([h],{type:"text/html"});const u=URL.createObjectURL(b);const a=document.createElement("a");a.href=u;a.download=fn;a.style.display="none";document.body.appendChild(a);a.click();setTimeout(()=>{document.body.removeChild(a);URL.revokeObjectURL(u);},200);}
+
+function App(){
+  const [step,setStep]=useState("login");
+  const [usuario,setUsuario]=useState("");
+  const [codigoInterno,setCodigoInterno]=useState("");
+  const [tipoProceso,setTipoProceso]=useState("");
+  const [modoBulto,setModoBulto]=useState("");
+  const [selectedBulto,setSelectedBulto]=useState(null);
+  const [opciones,setOpciones]=useState([]);
+  const [bultoCount,setBultoCount]=useState(1);
+  const [transportista,setTransportista]=useState("");
+  const [matricula,setMatricula]=useState("");
+  const [photoQueue,setPhotoQueue]=useState([]);
+  const [currentPhotoIndex,setCurrentPhotoIndex]=useState(0);
+  const [capturedPhotos,setCapturedPhotos]=useState({});
+  const [photoLabels,setPhotoLabels]=useState({});
+  const [completedSessions,setCompletedSessions]=useState([]);
+  const [animateIn,setAnimateIn]=useState(true);
+  const [bultoRegistry,setBultoRegistry]=useState({});
+  const [uploadStatus,setUploadStatus]=useState("idle");
+  const [uploadMsg,setUploadMsg]=useState("");
+  const [loadingBultos,setLoadingBultos]=useState(false);
+  const videoRef=useRef(null);const streamRef=useRef(null);const canvasRef=useRef(null);
+
+  const anim=(next)=>{setAnimateIn(false);setTimeout(()=>{setStep(next);setAnimateIn(true);},200);};
+  const registryKey=codigoInterno+"_"+tipoProceso;
+  const currentBultos=bultoRegistry[registryKey]||[];
+
+  // ═══ Cargar bultos desde SharePoint al entrar en gestión ═══
+  useEffect(()=>{
+    if(step==="gestion"&&codigoInterno&&tipoProceso){
+      setLoadingBultos(true);
+      fetchBultosFromSharePoint(codigoInterno,tipoProceso).then(bultos=>{
+        setBultoRegistry(prev=>({...prev,[registryKey]:bultos}));
+        setLoadingBultos(false);
+      }).catch(()=>setLoadingBultos(false));
+    }
+  },[step]);
+
+  const createNewBulto=()=>{
+    const maxNum=currentBultos.reduce((max,b)=>Math.max(max,b.number),0);
+    const num=maxNum+1;
+    const now=new Date();
+    const bulto={id:generateId(),number:num,name:"Bulto-"+pad3(num),date:formatDate(now),records:[]};
     setBultoRegistry(p=>({...p,[registryKey]:[...(p[registryKey]||[]),bulto]}));
-    setSelectedBulto(bulto); setModoBulto("nuevo"); anim("opciones");
+    setSelectedBulto(bulto);setModoBulto("nuevo");anim("opciones");
   };
-  const selectBultoForAmpliar = (bulto) => {setSelectedBulto(bulto);setModoBulto("ampliar");anim("opciones");};
+  const selectBultoForAmpliar=(bulto)=>{setSelectedBulto(bulto);setModoBulto("ampliar");anim("opciones");};
 
-  const buildQueue = useCallback(() => {
-    const q = [];
-    opciones.forEach((opt) => {
-      if(opt==="multiple"){for(let i=1;i<=bultoCount;i++) q.push({key:"multiple_"+i,label:"Foto bulto #"+i,option:"multiple"});}
-      else{PHOTO_REQUIREMENTS[opt].photos.forEach((l,i)=>q.push({key:opt+"_"+i,label:l,option:opt}));}
-    }); return q;
-  }, [opciones, bultoCount]);
+  const buildQueue=useCallback(()=>{const q=[];opciones.forEach((opt)=>{if(opt==="multiple"){for(let i=1;i<=bultoCount;i++)q.push({key:"multiple_"+i,label:"Foto bulto #"+i,option:"multiple"});}else{PHOTO_REQUIREMENTS[opt].photos.forEach((l,i)=>q.push({key:opt+"_"+i,label:l,option:opt}));}});return q;},[opciones,bultoCount]);
 
-  const startCam = async () => { try{const s=await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment",width:{ideal:1920},height:{ideal:1080}}});streamRef.current=s;if(videoRef.current)videoRef.current.srcObject=s;}catch{alert("No se pudo acceder a la cámara.");} };
-  const stopCam = () => {if(streamRef.current){streamRef.current.getTracks().forEach(t=>t.stop());streamRef.current=null;}};
-  const snap = () => {if(!videoRef.current||!canvasRef.current)return null;const v=videoRef.current,c=canvasRef.current;c.width=v.videoWidth;c.height=v.videoHeight;c.getContext("2d").drawImage(v,0,0);return c.toDataURL("image/jpeg",0.85);};
-  const handleSnap = () => {const photo=snap();if(!photo)return;const item=photoQueue[currentPhotoIndex];setCapturedPhotos(p=>({...p,[item.key]:photo}));setPhotoLabels(p=>({...p,[item.key]:item.label}));if(currentPhotoIndex<photoQueue.length-1)setCurrentPhotoIndex(i=>i+1);else{stopCam();anim("transportista");}};
-  const retake = () => {const item=photoQueue[currentPhotoIndex];setCapturedPhotos(p=>{const n={...p};delete n[item.key];return n;});};
+  const startCam=async()=>{try{const s=await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment",width:{ideal:1920},height:{ideal:1080}}});streamRef.current=s;if(videoRef.current)videoRef.current.srcObject=s;}catch{alert("No se pudo acceder a la cámara.");}};
+  const stopCam=()=>{if(streamRef.current){streamRef.current.getTracks().forEach(t=>t.stop());streamRef.current=null;}};
+  const snap=()=>{if(!videoRef.current||!canvasRef.current)return null;const v=videoRef.current,c=canvasRef.current;c.width=v.videoWidth;c.height=v.videoHeight;c.getContext("2d").drawImage(v,0,0);return c.toDataURL("image/jpeg",0.85);};
+  const handleSnap=()=>{const photo=snap();if(!photo)return;const item=photoQueue[currentPhotoIndex];setCapturedPhotos(p=>({...p,[item.key]:photo}));setPhotoLabels(p=>({...p,[item.key]:item.label}));if(currentPhotoIndex<photoQueue.length-1)setCurrentPhotoIndex(i=>i+1);else{stopCam();anim("transportista");}};
+  const retake=()=>{const item=photoQueue[currentPhotoIndex];setCapturedPhotos(p=>{const n={...p};delete n[item.key];return n;});};
 
   useEffect(()=>{if(step==="camera"){const q=buildQueue();setPhotoQueue(q);setCurrentPhotoIndex(0);setCapturedPhotos({});setPhotoLabels({});startCam();}return()=>{if(step==="camera")stopCam();};},[step]);
 
-  const finalize = async () => {
+  const finalize=async()=>{
     const now=new Date();const tipo=tipoProceso==="empaquetamiento"?"Empaquetamiento":"Transporte";
     const bultoName=selectedBulto?selectedBulto.name:"Bulto-001";
-    const recordNum=selectedBulto?(currentBultos.find(b=>b.id===selectedBulto.id)?.records?.length||0)+1:1;
-    const session = {id:generateId(),codigoInterno,tipoProceso,modoBulto,bultoName,bultoId:selectedBulto?.id,opciones:opciones.map(o=>PHOTO_REQUIREMENTS[o].label),fecha:formatDate(now),hora:formatTime(now),horaShort:formatTimeShort(now),usuario,transportista,matricula:matricula.toUpperCase(),photos:{...capturedPhotos},photoLabels:{...photoLabels},folderPath:codigoInterno+"/"+tipo+"/"+bultoName+"/"+(modoBulto==="ampliar"?"Registro-"+pad3(recordNum)+"_":"")+formatDate(now)+"_"+formatTimeShort(now)};
-
-    if(selectedBulto){setBultoRegistry(prev=>{const key=registryKey;const bultos=[...(prev[key]||[])];const idx=bultos.findIndex(b=>b.id===selectedBulto.id);if(idx>=0)bultos[idx]={...bultos[idx],records:[...bultos[idx].records,session]};return{...prev,[key]:bultos};});}
+    const recordNum=selectedBulto?(selectedBulto.records?.length||0)+1:1;
+    const session={id:generateId(),codigoInterno,tipoProceso,modoBulto,bultoName,bultoId:selectedBulto?.id,opciones:opciones.map(o=>PHOTO_REQUIREMENTS[o].label),fecha:formatDate(now),hora:formatTime(now),horaShort:formatTimeShort(now),usuario,transportista,matricula:matricula.toUpperCase(),photos:{...capturedPhotos},photoLabels:{...photoLabels},folderPath:codigoInterno+"/"+tipo+"/"+bultoName+"/"+(modoBulto==="ampliar"?"Registro-"+pad3(recordNum)+"_":"")+formatDate(now)+"_"+formatTimeShort(now)};
     setCompletedSessions(p=>[session,...p]);
-    
-    // Subir a SharePoint
-    setUploadStatus("uploading");
-    setUploadMsg("Subiendo a SharePoint...");
-    anim("summary");
-
-    try {
-      await enviarASharePoint(session);
-      setUploadStatus("ok");
-      setUploadMsg("Subido a SharePoint correctamente");
-    } catch (err) {
-      setUploadStatus("error");
-      setUploadMsg("Error al subir: " + err.message);
-    }
+    setUploadStatus("uploading");setUploadMsg("Subiendo a SharePoint...");anim("summary");
+    try{await enviarASharePoint(session);setUploadStatus("ok");setUploadMsg("Subido correctamente");}catch(err){setUploadStatus("error");setUploadMsg("Error: "+err.message);}
   };
 
-  const retryUpload = async () => {
-    const s = completedSessions[0];
-    if (!s) return;
-    setUploadStatus("uploading");
-    setUploadMsg("Reintentando...");
-    try {
-      await enviarASharePoint(s);
-      setUploadStatus("ok");
-      setUploadMsg("Subido a SharePoint correctamente");
-    } catch (err) {
-      setUploadStatus("error");
-      setUploadMsg("Error al subir: " + err.message);
-    }
-  };
+  const retryUpload=async()=>{const s=completedSessions[0];if(!s)return;setUploadStatus("uploading");setUploadMsg("Reintentando...");try{await enviarASharePoint(s);setUploadStatus("ok");setUploadMsg("Subido correctamente");}catch(err){setUploadStatus("error");setUploadMsg("Error: "+err.message);}};
 
-  const resetAll = () => {setCodigoInterno("");setTipoProceso("");setModoBulto("");setSelectedBulto(null);setOpciones([]);setBultoCount(1);setTransportista("");setMatricula("");setPhotoQueue([]);setCurrentPhotoIndex(0);setCapturedPhotos({});setPhotoLabels({});setUploadStatus("idle");setUploadMsg("");anim("codigo");};
-  const resetToGestion = () => {setModoBulto("");setSelectedBulto(null);setOpciones([]);setBultoCount(1);setTransportista("");setMatricula("");setPhotoQueue([]);setCurrentPhotoIndex(0);setCapturedPhotos({});setPhotoLabels({});setUploadStatus("idle");setUploadMsg("");anim("gestion");};
-  const toggleOpt = (opt) => {setOpciones(p=>p.includes(opt)?p.filter(o=>o!==opt):[...p,opt]);};
+  const resetAll=()=>{setCodigoInterno("");setTipoProceso("");setModoBulto("");setSelectedBulto(null);setOpciones([]);setBultoCount(1);setTransportista("");setMatricula("");setPhotoQueue([]);setCurrentPhotoIndex(0);setCapturedPhotos({});setPhotoLabels({});setUploadStatus("idle");setUploadMsg("");anim("codigo");};
+  const resetToGestion=()=>{setModoBulto("");setSelectedBulto(null);setOpciones([]);setBultoCount(1);setTransportista("");setMatricula("");setPhotoQueue([]);setCurrentPhotoIndex(0);setCapturedPhotos({});setPhotoLabels({});setUploadStatus("idle");setUploadMsg("");anim("gestion");};
+  const toggleOpt=(opt)=>{setOpciones(p=>p.includes(opt)?p.filter(o=>o!==opt):[...p,opt]);};
 
-  const wrap = {minHeight:"100vh",background:C.bg,fontFamily:"inherit",color:C.text,display:"flex",flexDirection:"column",opacity:animateIn?1:0,transform:animateIn?"translateY(0)":"translateY(12px)",transition:"opacity .25s ease, transform .25s ease"};
-  const hdr = (title,onBack) => (<div style={{background:C.surface,borderBottom:"1px solid "+C.border,padding:"16px 20px",display:"flex",alignItems:"center",gap:"12px",position:"sticky",top:0,zIndex:10}}>{onBack&&<button onClick={onBack} style={{...bb,background:"none",padding:"6px",color:C.textMuted,minWidth:"auto"}}><IconBack/></button>}<h2 style={{margin:0,fontSize:"16px",fontWeight:700,letterSpacing:"-0.02em",flex:1}}>{title}</h2><div style={{fontSize:"11px",color:C.textDim,fontFamily:mono}}>{usuario}</div></div>);
-  const stps = (cur,tot) => (<div style={{display:"flex",gap:"4px",padding:"16px 20px 8px"}}>{Array.from({length:tot},(_,i)=><div key={i} style={{flex:1,height:"3px",borderRadius:"2px",background:i<=cur?C.accent:C.border,transition:"background .3s"}}/>)}</div>);
-  const inp = (v) => ({width:"100%",padding:"14px 16px",background:C.surfaceLight,border:"2px solid "+(v?C.success:C.border),borderRadius:"10px",color:C.text,fontSize:"16px",fontFamily:"inherit",outline:"none",boxSizing:"border-box",transition:"border-color .2s"});
-  const lbl = {display:"flex",alignItems:"center",gap:"6px",fontSize:"12px",fontWeight:600,color:C.textMuted,marginBottom:"8px",textTransform:"uppercase",letterSpacing:"0.05em"};
-  const pbtn = (ok) => ({...bb,width:"100%",padding:"14px",background:ok?"linear-gradient(135deg,"+C.accent+","+C.accentDark+")":C.surfaceLight,color:ok?"#000":C.textDim,fontSize:"15px",opacity:ok?1:0.5});
+  const wrap={minHeight:"100vh",background:C.bg,fontFamily:"inherit",color:C.text,display:"flex",flexDirection:"column",opacity:animateIn?1:0,transform:animateIn?"translateY(0)":"translateY(12px)",transition:"opacity .25s ease, transform .25s ease"};
+  const hdr=(title,onBack)=>(<div style={{background:C.surface,borderBottom:"1px solid "+C.border,padding:"16px 20px",display:"flex",alignItems:"center",gap:"12px",position:"sticky",top:0,zIndex:10}}>{onBack&&<button onClick={onBack} style={{...bb,background:"none",padding:"6px",color:C.textMuted,minWidth:"auto"}}><IconBack/></button>}<h2 style={{margin:0,fontSize:"16px",fontWeight:700,letterSpacing:"-0.02em",flex:1}}>{title}</h2><div style={{fontSize:"11px",color:C.textDim,fontFamily:mono}}>{usuario}</div></div>);
+  const stps=(cur,tot)=>(<div style={{display:"flex",gap:"4px",padding:"16px 20px 8px"}}>{Array.from({length:tot},(_,i)=><div key={i} style={{flex:1,height:"3px",borderRadius:"2px",background:i<=cur?C.accent:C.border,transition:"background .3s"}}/>)}</div>);
+  const inp=(v)=>({width:"100%",padding:"14px 16px",background:C.surfaceLight,border:"2px solid "+(v?C.success:C.border),borderRadius:"10px",color:C.text,fontSize:"16px",fontFamily:"inherit",outline:"none",boxSizing:"border-box",transition:"border-color .2s"});
+  const lbl={display:"flex",alignItems:"center",gap:"6px",fontSize:"12px",fontWeight:600,color:C.textMuted,marginBottom:"8px",textTransform:"uppercase",letterSpacing:"0.05em"};
+  const pbtn=(ok)=>({...bb,width:"100%",padding:"14px",background:ok?"linear-gradient(135deg,"+C.accent+","+C.accentDark+")":C.surfaceLight,color:ok?"#000":C.textDim,fontSize:"15px",opacity:ok?1:0.5});
 
-  // ═══ Upload status banner ═══
-  const UploadBanner = () => {
-    if (uploadStatus === "idle") return null;
-    const colors = { uploading: { bg: C.info+"20", border: C.info+"60", text: C.info }, ok: { bg: C.success+"20", border: C.success+"60", text: C.success }, error: { bg: C.danger+"20", border: C.danger+"60", text: C.danger } };
-    const c = colors[uploadStatus] || colors.uploading;
-    return (
-      <div style={{margin:"0 0 16px",padding:"14px 16px",background:c.bg,border:"2px solid "+c.border,borderRadius:"12px",display:"flex",alignItems:"center",gap:"12px"}}>
-        {uploadStatus==="uploading" && <IconSpinner/>}
-        {uploadStatus==="ok" && <div style={{color:C.success}}><IconCheck/></div>}
-        {uploadStatus==="error" && <div style={{color:C.danger}}><IconAlert/></div>}
-        <div style={{flex:1}}>
-          <div style={{fontSize:"14px",fontWeight:700,color:c.text}}>{uploadStatus==="uploading"?"Subiendo a SharePoint...":uploadStatus==="ok"?"Subido a SharePoint":"Error de subida"}</div>
-          {uploadMsg && uploadStatus==="error" && <div style={{fontSize:"11px",color:C.textDim,marginTop:"2px"}}>{uploadMsg}</div>}
-        </div>
-        {uploadStatus==="error" && <button onClick={retryUpload} style={{...bb,background:C.danger+"30",padding:"8px 14px",color:C.danger,fontSize:"12px",borderRadius:"8px",minWidth:"auto"}}>Reintentar</button>}
-      </div>
-    );
-  };
+  const UploadBanner=()=>{if(uploadStatus==="idle")return null;const colors={uploading:{bg:C.info+"20",border:C.info+"60",text:C.info},ok:{bg:C.success+"20",border:C.success+"60",text:C.success},error:{bg:C.danger+"20",border:C.danger+"60",text:C.danger}};const c=colors[uploadStatus]||colors.uploading;return(<div style={{margin:"0 0 16px",padding:"14px 16px",background:c.bg,border:"2px solid "+c.border,borderRadius:"12px",display:"flex",alignItems:"center",gap:"12px"}}>{uploadStatus==="uploading"&&<IconSpinner/>}{uploadStatus==="ok"&&<div style={{color:C.success}}><IconCheck/></div>}{uploadStatus==="error"&&<div style={{color:C.danger}}><IconAlert/></div>}<div style={{flex:1}}><div style={{fontSize:"14px",fontWeight:700,color:c.text}}>{uploadStatus==="uploading"?"Subiendo a SharePoint...":uploadStatus==="ok"?"Subido a SharePoint":"Error de subida"}</div>{uploadMsg&&uploadStatus==="error"&&<div style={{fontSize:"11px",color:C.textDim,marginTop:"2px"}}>{uploadMsg}</div>}</div>{uploadStatus==="error"&&<button onClick={retryUpload} style={{...bb,background:C.danger+"30",padding:"8px 14px",color:C.danger,fontSize:"12px",borderRadius:"8px",minWidth:"auto"}}>Reintentar</button>}</div>);};
 
-  // ═══ LOGIN ═══
-  if(step==="login") return (<div style={wrap}><div style={{flex:1,display:"flex",flexDirection:"column",justifyContent:"center",padding:"40px 24px"}}><div style={{textAlign:"center",marginBottom:"48px"}}><div style={{width:"72px",height:"72px",borderRadius:"18px",background:"linear-gradient(135deg,"+C.accent+","+C.accentDark+")",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 20px",boxShadow:"0 8px 32px "+C.accent+"33"}}><svg width="36" height="36" fill="none" stroke="#fff" strokeWidth="2" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a4 4 0 00-8 0v2"/></svg></div><h1 style={{margin:"0 0 8px",fontSize:"26px",fontWeight:800,letterSpacing:"-0.03em"}}>Gestión Almacén</h1><p style={{margin:0,color:C.textMuted,fontSize:"14px"}}>Control de empaquetamiento y transporte</p></div><div style={{maxWidth:"340px",width:"100%",margin:"0 auto"}}><label style={lbl}><IconUser/> Nombre de usuario</label><input type="text" value={usuario} onChange={e=>setUsuario(e.target.value)} placeholder="Ej: Juan García" style={inp(false)} onFocus={e=>e.target.style.borderColor=C.accent} onBlur={e=>e.target.style.borderColor=C.border}/><button onClick={()=>usuario.trim()&&anim("codigo")} disabled={!usuario.trim()} style={{...pbtn(usuario.trim()),marginTop:"20px"}}>Entrar <IconArrow/></button></div></div></div>);
+  if(step==="login")return(<div style={wrap}><div style={{flex:1,display:"flex",flexDirection:"column",justifyContent:"center",padding:"40px 24px"}}><div style={{textAlign:"center",marginBottom:"48px"}}><div style={{width:"72px",height:"72px",borderRadius:"18px",background:"linear-gradient(135deg,"+C.accent+","+C.accentDark+")",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 20px",boxShadow:"0 8px 32px "+C.accent+"33"}}><svg width="36" height="36" fill="none" stroke="#fff" strokeWidth="2" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a4 4 0 00-8 0v2"/></svg></div><h1 style={{margin:"0 0 8px",fontSize:"26px",fontWeight:800,letterSpacing:"-0.03em"}}>Gestión Almacén</h1><p style={{margin:0,color:C.textMuted,fontSize:"14px"}}>Control de empaquetamiento y transporte</p></div><div style={{maxWidth:"340px",width:"100%",margin:"0 auto"}}><label style={lbl}><IconUser/> Nombre de usuario</label><input type="text" value={usuario} onChange={e=>setUsuario(e.target.value)} placeholder="Ej: Juan García" style={inp(false)} onFocus={e=>e.target.style.borderColor=C.accent} onBlur={e=>e.target.style.borderColor=C.border}/><button onClick={()=>usuario.trim()&&anim("codigo")} disabled={!usuario.trim()} style={{...pbtn(usuario.trim()),marginTop:"20px"}}>Entrar <IconArrow/></button></div></div></div>);
 
-  // ═══ CÓDIGO ═══
-  if(step==="codigo"){const ok=/^\d{2}P[IV]-\d{5}$/.test(codigoInterno.toUpperCase());return(<div style={wrap}>{hdr("Código Interno",null)}{stps(0,6)}<div style={{flex:1,padding:"24px 20px"}}><p style={{color:C.textMuted,fontSize:"14px",margin:"0 0 24px",lineHeight:1.5}}>Introduce el código interno del pedido.</p><label style={lbl}>Código del pedido</label><input type="text" value={codigoInterno} onChange={e=>setCodigoInterno(e.target.value.toUpperCase())} placeholder="Ej: 25PI-00015" maxLength={10} style={{...inp(ok),fontSize:"20px",fontFamily:mono,fontWeight:700,letterSpacing:"0.05em",textAlign:"center"}} onFocus={e=>{if(!ok)e.target.style.borderColor=C.accent;}} onBlur={e=>{if(!ok)e.target.style.borderColor=C.border;}}/><p style={{fontSize:"12px",color:ok?C.success:C.textDim,marginTop:"8px",fontFamily:mono}}>{ok?"✓ Formato válido":"Formato: 00PI-00000 ó 00PV-00000"}</p>{ok&&<div style={{marginTop:"16px",padding:"12px 16px",background:C.surfaceLight,borderRadius:"8px",border:"1px solid "+C.border,display:"flex",alignItems:"center",gap:"10px"}}><IconFolder/><span style={{fontFamily:mono,fontSize:"13px",color:C.accentLight}}>/{codigoInterno}/</span></div>}<button onClick={()=>ok&&anim("proceso")} disabled={!ok} style={{...pbtn(ok),marginTop:"32px"}}>Continuar <IconArrow/></button>{completedSessions.length>0&&<div style={{marginTop:"32px"}}><p style={{fontSize:"12px",fontWeight:600,color:C.textDim,textTransform:"uppercase",letterSpacing:"0.05em",marginBottom:"12px"}}>Sesiones recientes</p>{completedSessions.slice(0,5).map(s=>(<div key={s.id} style={{padding:"10px 14px",background:C.surfaceLight,borderRadius:"8px",marginBottom:"8px",border:"1px solid "+C.border,display:"flex",justifyContent:"space-between",alignItems:"center"}}><div><span style={{fontFamily:mono,fontSize:"12px",fontWeight:700,color:C.accentLight}}>{s.codigoInterno}</span><span style={{fontSize:"11px",color:C.textDim,marginLeft:"8px"}}>{s.bultoName}</span></div><button onClick={()=>descargarInforme(s)} style={{...bb,background:C.danger+"20",padding:"6px 10px",color:C.danger,fontSize:"11px",borderRadius:"6px",minWidth:"auto"}}><IconDownload/></button></div>))}</div>}</div></div>);}
+  if(step==="codigo"){const ok=/^\d{2}P[IV]-\d{5}$/.test(codigoInterno.toUpperCase());return(<div style={wrap}>{hdr("Código Interno",null)}{stps(0,6)}<div style={{flex:1,padding:"24px 20px"}}><p style={{color:C.textMuted,fontSize:"14px",margin:"0 0 24px",lineHeight:1.5}}>Introduce el código interno del pedido.</p><label style={lbl}>Código del pedido</label><input type="text" value={codigoInterno} onChange={e=>setCodigoInterno(e.target.value.toUpperCase())} placeholder="Ej: 25PI-00015" maxLength={10} style={{...inp(ok),fontSize:"20px",fontFamily:mono,fontWeight:700,letterSpacing:"0.05em",textAlign:"center"}} onFocus={e=>{if(!ok)e.target.style.borderColor=C.accent;}} onBlur={e=>{if(!ok)e.target.style.borderColor=C.border;}}/><p style={{fontSize:"12px",color:ok?C.success:C.textDim,marginTop:"8px",fontFamily:mono}}>{ok?"✓ Formato válido":"Formato: 00PI-00000 ó 00PV-00000"}</p><button onClick={()=>ok&&anim("proceso")} disabled={!ok} style={{...pbtn(ok),marginTop:"32px"}}>Continuar <IconArrow/></button></div></div>);}
 
-  // ═══ PROCESO ═══
   if(step==="proceso"){const Card=({type,icon,label,desc})=>(<button onClick={()=>{setTipoProceso(type);anim("gestion");}} style={{...bb,flexDirection:"column",width:"100%",padding:"28px 20px",background:C.surfaceLight,border:"2px solid "+C.border,borderRadius:"14px",color:C.text,gap:"12px"}} onTouchStart={e=>e.currentTarget.style.borderColor=C.accent} onTouchEnd={e=>e.currentTarget.style.borderColor=C.border}><div style={{width:"52px",height:"52px",borderRadius:"14px",background:C.accent+"15",display:"flex",alignItems:"center",justifyContent:"center"}}>{icon}</div><span style={{fontSize:"17px",fontWeight:700}}>{label}</span><span style={{fontSize:"13px",color:C.textMuted}}>{desc}</span></button>);return(<div style={wrap}>{hdr("Pedido "+codigoInterno,()=>anim("codigo"))}{stps(1,6)}<div style={{flex:1,padding:"24px 20px"}}><p style={{color:C.textMuted,fontSize:"14px",margin:"0 0 24px"}}>¿Qué tipo de proceso vas a realizar?</p><div style={{display:"flex",flexDirection:"column",gap:"14px"}}><Card type="empaquetamiento" label="Empaquetamiento" desc="Preparación y embalaje" icon={<svg width="26" height="26" fill="none" stroke={C.accent} strokeWidth="2" viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>}/><Card type="transporte" label="Transporte" desc="Carga y envío" icon={<IconTruck/>}/></div></div></div>);}
 
-  // ═══ GESTIÓN BULTOS ═══
-  if(step==="gestion"){const bultos=bultoRegistry[registryKey]||[];const nextNum=bultos.length+1;return(<div style={wrap}>{hdr((tipoProceso==="empaquetamiento"?"Empaquetamiento":"Transporte")+" — Bultos",()=>anim("proceso"))}{stps(2,6)}<div style={{flex:1,padding:"24px 20px"}}><button onClick={createNewBulto} style={{...bb,width:"100%",padding:"20px",background:"linear-gradient(135deg,"+C.accent+"18,"+C.accentDark+"10)",border:"2px solid "+C.accent,borderRadius:"14px",color:C.text,flexDirection:"row",gap:"14px",marginBottom:"24px",justifyContent:"flex-start"}}><div style={{width:"44px",height:"44px",borderRadius:"12px",background:C.accent,display:"flex",alignItems:"center",justifyContent:"center",color:"#000",flexShrink:0}}><IconPlus/></div><div style={{textAlign:"left"}}><div style={{fontSize:"16px",fontWeight:700}}>Crear bulto nuevo</div><div style={{fontSize:"12px",color:C.textMuted}}>Será <span style={{fontFamily:mono,color:C.accentLight,fontWeight:700}}>Bulto-{pad3(nextNum)}</span></div></div></button>{bultos.length>0&&<><div style={{display:"flex",alignItems:"center",gap:"8px",marginBottom:"14px"}}><IconList/><span style={{fontSize:"13px",fontWeight:600,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.05em"}}>Ampliar información</span></div><div style={{display:"flex",flexDirection:"column",gap:"8px"}}>{bultos.map(b=>(<button key={b.id} onClick={()=>selectBultoForAmpliar(b)} style={{...bb,width:"100%",padding:"14px 16px",background:C.surfaceLight,border:"2px solid "+C.border,borderRadius:"12px",color:C.text,justifyContent:"space-between"}}><div style={{display:"flex",alignItems:"center",gap:"12px"}}><div style={{width:"36px",height:"36px",borderRadius:"10px",background:C.info+"18",display:"flex",alignItems:"center",justifyContent:"center",color:C.info}}><IconFolder/></div><div style={{textAlign:"left"}}><div style={{fontSize:"14px",fontWeight:700,fontFamily:mono,color:C.accentLight}}>{b.name}</div><div style={{fontSize:"11px",color:C.textDim}}>Creado {b.date} · {b.records.length} registro{b.records.length!==1?"s":""}</div></div></div><div style={{display:"flex",alignItems:"center",gap:"6px",color:C.info,fontSize:"12px",fontWeight:600}}>Ampliar <IconArrow/></div></button>))}</div></>}{bultos.length===0&&<div style={{textAlign:"center",padding:"32px 20px",color:C.textDim}}><p style={{fontSize:"14px",marginBottom:"4px"}}>No hay bultos registrados aún</p><p style={{fontSize:"12px"}}>Pulsa "Crear bulto nuevo" para empezar</p></div>}</div></div>);}
+  // ═══ GESTIÓN BULTOS — ahora con datos de SharePoint ═══
+  if(step==="gestion"){
+    const bultos=currentBultos;
+    const maxNum=bultos.reduce((max,b)=>Math.max(max,b.number),0);
+    const nextNum=maxNum+1;
+    return(<div style={wrap}>
+      {hdr((tipoProceso==="empaquetamiento"?"Empaquetamiento":"Transporte")+" — Bultos",()=>anim("proceso"))}
+      {stps(2,6)}
+      <div style={{flex:1,padding:"24px 20px"}}>
 
-  // ═══ OPCIONES ═══
+        {/* Loading state */}
+        {loadingBultos&&<div style={{textAlign:"center",padding:"20px",marginBottom:"16px"}}>
+          <div style={{display:"inline-flex",alignItems:"center",gap:"10px",color:C.info,fontSize:"14px"}}><IconSpinner/> Consultando SharePoint...</div>
+        </div>}
+
+        {/* Crear bulto nuevo */}
+        <button onClick={createNewBulto} disabled={loadingBultos}
+          style={{...bb,width:"100%",padding:"20px",background:"linear-gradient(135deg,"+C.accent+"18,"+C.accentDark+"10)",border:"2px solid "+C.accent,borderRadius:"14px",color:C.text,flexDirection:"row",gap:"14px",marginBottom:"24px",justifyContent:"flex-start",opacity:loadingBultos?0.5:1}}>
+          <div style={{width:"44px",height:"44px",borderRadius:"12px",background:C.accent,display:"flex",alignItems:"center",justifyContent:"center",color:"#000",flexShrink:0}}><IconPlus/></div>
+          <div style={{textAlign:"left"}}>
+            <div style={{fontSize:"16px",fontWeight:700}}>Crear bulto nuevo</div>
+            <div style={{fontSize:"12px",color:C.textMuted}}>Será <span style={{fontFamily:mono,color:C.accentLight,fontWeight:700}}>Bulto-{pad3(nextNum)}</span></div>
+          </div>
+        </button>
+
+        {/* Lista de bultos existentes desde SharePoint */}
+        {!loadingBultos&&bultos.length>0&&<>
+          <div style={{display:"flex",alignItems:"center",gap:"8px",marginBottom:"14px"}}>
+            <IconList/><span style={{fontSize:"13px",fontWeight:600,color:C.textMuted,textTransform:"uppercase",letterSpacing:"0.05em"}}>Ampliar información ({bultos.length} bulto{bultos.length!==1?"s":""})</span>
+          </div>
+          <div style={{display:"flex",flexDirection:"column",gap:"8px"}}>
+            {bultos.map(b=>(<button key={b.id} onClick={()=>selectBultoForAmpliar(b)}
+              style={{...bb,width:"100%",padding:"14px 16px",background:C.surfaceLight,border:"2px solid "+C.border,borderRadius:"12px",color:C.text,justifyContent:"space-between"}}>
+              <div style={{display:"flex",alignItems:"center",gap:"12px"}}>
+                <div style={{width:"36px",height:"36px",borderRadius:"10px",background:C.info+"18",display:"flex",alignItems:"center",justifyContent:"center",color:C.info}}><IconFolder/></div>
+                <div style={{textAlign:"left"}}>
+                  <div style={{fontSize:"14px",fontWeight:700,fontFamily:mono,color:C.accentLight}}>{b.name}</div>
+                  <div style={{fontSize:"11px",color:C.textDim}}>{b.date} · {b.records.length} registro{b.records.length!==1?"s":""}</div>
+                </div>
+              </div>
+              <div style={{display:"flex",alignItems:"center",gap:"6px",color:C.info,fontSize:"12px",fontWeight:600}}>Ampliar <IconArrow/></div>
+            </button>))}
+          </div>
+        </>}
+
+        {!loadingBultos&&bultos.length===0&&<div style={{textAlign:"center",padding:"32px 20px",color:C.textDim}}>
+          <p style={{fontSize:"14px",marginBottom:"4px"}}>No hay bultos registrados aún</p>
+          <p style={{fontSize:"12px"}}>Pulsa "Crear bulto nuevo" para empezar</p>
+        </div>}
+
+        {/* Botón refresh manual */}
+        {!loadingBultos&&<button onClick={()=>{setLoadingBultos(true);fetchBultosFromSharePoint(codigoInterno,tipoProceso).then(b=>{setBultoRegistry(p=>({...p,[registryKey]:b}));setLoadingBultos(false);}).catch(()=>setLoadingBultos(false));}}
+          style={{...bb,width:"100%",marginTop:"20px",padding:"10px",background:"transparent",border:"1px solid "+C.border,color:C.textDim,fontSize:"12px",borderRadius:"8px"}}><IconRefresh/> Actualizar lista</button>}
+      </div>
+    </div>);
+  }
+
   if(step==="opciones"){const defs=[{key:"multiple",label:"1 bulto o más",icon:"📦",desc:"1 foto por cada bulto"},{key:"external",label:"Transporte externo",icon:"🚛",desc:"Foto matrícula + precinto"},{key:"fragile",label:"Mercancía frágil",icon:"⚠️",desc:"Foto embalaje interior"},{key:"export",label:"Exportación",icon:"🌍",desc:"Packing list + doc. aduanera"}];const total=opciones.reduce((a,o)=>o==="multiple"?a+bultoCount:a+PHOTO_REQUIREMENTS[o].photos.length,0);const modoLabel=modoBulto==="nuevo"?"Nuevo bulto":"Ampliando "+selectedBulto?.name;return(<div style={wrap}>{hdr("Opciones",()=>anim("gestion"))}{stps(3,6)}<div style={{flex:1,padding:"24px 20px"}}><div style={{padding:"10px 14px",background:modoBulto==="nuevo"?C.accent+"12":C.info+"12",border:"1px solid "+(modoBulto==="nuevo"?C.accent+"40":C.info+"40"),borderRadius:"10px",marginBottom:"20px",display:"flex",alignItems:"center",gap:"10px"}}><span style={{fontSize:"16px"}}>{modoBulto==="nuevo"?"🆕":"📎"}</span><div><div style={{fontSize:"13px",fontWeight:700,color:modoBulto==="nuevo"?C.accentLight:C.info}}>{modoLabel}</div><div style={{fontSize:"11px",color:C.textDim}}>{selectedBulto?.name} · {codigoInterno}</div></div></div><p style={{color:C.textMuted,fontSize:"14px",margin:"0 0 20px"}}>Selecciona las opciones que apliquen.</p><div style={{display:"flex",flexDirection:"column",gap:"10px"}}>{defs.map(opt=>{const sel=opciones.includes(opt.key);return <div key={opt.key}><button onClick={()=>toggleOpt(opt.key)} style={{...bb,width:"100%",padding:"14px 16px",background:sel?C.accent+"12":C.surfaceLight,border:"2px solid "+(sel?C.accent:C.border),borderRadius:"12px",color:C.text,justifyContent:"flex-start",gap:"14px"}}><div style={{width:"24px",height:"24px",borderRadius:"6px",border:"2px solid "+(sel?C.accent:C.textDim),background:sel?C.accent:"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{sel&&<IconCheck/>}</div><span style={{fontSize:"16px",marginRight:"4px"}}>{opt.icon}</span><div style={{textAlign:"left"}}><div style={{fontSize:"14px",fontWeight:600}}>{opt.label}</div><div style={{fontSize:"12px",color:C.textMuted}}>{opt.desc}</div></div></button>{opt.key==="multiple"&&sel&&<div style={{margin:"10px 0 4px 56px",display:"flex",alignItems:"center",gap:"12px"}}><span style={{fontSize:"13px",color:C.textMuted}}>Nº bultos:</span><button onClick={()=>setBultoCount(Math.max(1,bultoCount-1))} style={{...bb,width:"32px",height:"32px",minWidth:"32px",background:C.surface,border:"1px solid "+C.border,borderRadius:"8px",color:C.text,padding:0,fontSize:"18px"}}>−</button><span style={{fontFamily:mono,fontSize:"18px",fontWeight:700,minWidth:"28px",textAlign:"center",color:C.accentLight}}>{bultoCount}</span><button onClick={()=>setBultoCount(Math.min(50,bultoCount+1))} style={{...bb,width:"32px",height:"32px",minWidth:"32px",background:C.surface,border:"1px solid "+C.border,borderRadius:"8px",color:C.text,padding:0,fontSize:"18px"}}>+</button></div>}</div>;})}</div>{opciones.length>0&&<div style={{marginTop:"20px",padding:"12px 16px",background:C.surfaceLight,borderRadius:"10px",border:"1px solid "+C.border,display:"flex",justifyContent:"space-between"}}><span style={{fontSize:"13px",color:C.textMuted}}>Fotos requeridas</span><span style={{fontFamily:mono,fontSize:"15px",fontWeight:700,color:C.accentLight}}>{total}</span></div>}<button onClick={()=>opciones.length>0&&anim("camera")} disabled={opciones.length===0} style={{...pbtn(opciones.length>0),marginTop:"24px"}}><IconCamera/> Comenzar fotos ({total}) <IconArrow/></button></div></div>);}
 
-  // ═══ CAMERA ═══
   if(step==="camera"){const ci=photoQueue[currentPhotoIndex];const has=ci&&capturedPhotos[ci?.key];return(<div style={{...wrap,background:"#000"}}><div style={{position:"relative",flex:1,display:"flex",flexDirection:"column"}}><div style={{position:"absolute",top:0,left:0,right:0,zIndex:10,background:"linear-gradient(to bottom,rgba(0,0,0,.8),transparent)",padding:"16px 20px 40px"}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:"12px"}}><button onClick={()=>{stopCam();anim("opciones");}} style={{...bb,background:"rgba(255,255,255,.15)",padding:"8px 12px",color:"#fff",fontSize:"13px",borderRadius:"8px",minWidth:"auto"}}><IconBack/> Volver</button><span style={{fontFamily:mono,fontSize:"13px",color:"rgba(255,255,255,.7)"}}>{currentPhotoIndex+1} / {photoQueue.length}</span></div><div style={{background:"rgba(255,255,255,.15)",borderRadius:"10px",padding:"10px 14px"}}><span style={{fontSize:"11px",color:"rgba(255,255,255,.5)",textTransform:"uppercase",letterSpacing:"0.05em"}}>{ci?PHOTO_REQUIREMENTS[ci.option]?.label:""}</span><div style={{fontSize:"15px",fontWeight:700,color:"#fff",marginTop:"2px"}}>{ci?.label}</div></div></div><div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center"}}>{has?<img src={capturedPhotos[ci.key]} alt="" style={{width:"100%",height:"100%",objectFit:"contain"}}/>:<video ref={videoRef} autoPlay playsInline muted style={{width:"100%",height:"100%",objectFit:"cover"}}/>}<canvas ref={canvasRef} style={{display:"none"}}/></div><div style={{position:"absolute",bottom:"120px",left:0,right:0,display:"flex",justifyContent:"center",gap:"6px",padding:"0 20px",flexWrap:"wrap"}}>{photoQueue.map((item,i)=><div key={item.key} style={{width:i===currentPhotoIndex?"20px":"8px",height:"8px",borderRadius:"4px",background:capturedPhotos[item.key]?C.success:i===currentPhotoIndex?C.accent:"rgba(255,255,255,.3)",transition:"all .3s"}}/>)}</div><div style={{position:"absolute",bottom:0,left:0,right:0,background:"linear-gradient(to top,rgba(0,0,0,.9),transparent)",padding:"40px 20px 36px",display:"flex",justifyContent:"center",alignItems:"center",gap:"24px"}}>{has?<><button onClick={retake} style={{...bb,background:"rgba(255,255,255,.15)",padding:"12px 20px",color:"#fff",fontSize:"14px",borderRadius:"12px"}}><IconRefresh/> Repetir</button><button onClick={()=>{if(currentPhotoIndex<photoQueue.length-1)setCurrentPhotoIndex(i=>i+1);else{stopCam();anim("transportista");}}} style={{...bb,background:"linear-gradient(135deg,"+C.success+",#059669)",padding:"14px 28px",color:"#fff",fontSize:"15px",borderRadius:"12px"}}>{currentPhotoIndex<photoQueue.length-1?"Siguiente":"Finalizar fotos"} <IconArrow/></button></>:<button onClick={handleSnap} style={{width:"72px",height:"72px",borderRadius:"50%",background:"#fff",border:"4px solid rgba(255,255,255,.3)",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 4px 20px rgba(0,0,0,.4)"}}><div style={{width:"56px",height:"56px",borderRadius:"50%",background:"#fff"}}/></button>}</div></div></div>);}
 
-  // ═══ TRANSPORTISTA ═══
   if(step==="transportista"){const need=opciones.includes("external");const ok=transportista.trim()&&(!need||matricula.trim());return(<div style={wrap}>{hdr("Datos de transporte",()=>{startCam();anim("camera");})}{stps(4,6)}<div style={{flex:1,padding:"24px 20px"}}><div style={{textAlign:"center",marginBottom:"24px"}}><div style={{width:"56px",height:"56px",borderRadius:"14px",background:C.success+"15",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 12px"}}><svg width="28" height="28" fill="none" stroke={C.success} strokeWidth="2" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div><p style={{fontSize:"14px",color:C.success,fontWeight:600,margin:0}}>{Object.keys(capturedPhotos).length} fotos capturadas</p></div><label style={lbl}><IconTruck/> Transportista asignado</label><input type="text" value={transportista} onChange={e=>setTransportista(e.target.value)} placeholder="Ej: SEUR, MRW, DHL..." style={inp(false)} onFocus={e=>e.target.style.borderColor=C.accent} onBlur={e=>e.target.style.borderColor=C.border}/><div style={{marginTop:"20px"}}><label style={lbl}><IconPlate/> Matrícula del camión {need?<span style={{color:C.danger,fontSize:"11px",fontWeight:700,marginLeft:"4px"}}>* OBLIGATORIO</span>:<span style={{color:C.textDim,fontSize:"11px",marginLeft:"4px"}}>(opcional)</span>}</label><input type="text" value={matricula} onChange={e=>setMatricula(e.target.value.toUpperCase())} placeholder="Ej: 1234 ABC" maxLength={12} style={{...inp(false),fontSize:"20px",fontFamily:mono,fontWeight:700,letterSpacing:"0.08em",textAlign:"center"}} onFocus={e=>e.target.style.borderColor=C.accent} onBlur={e=>e.target.style.borderColor=C.border}/>{matricula&&<div style={{marginTop:"10px",padding:"10px 16px",background:"#fef3c720",border:"2px solid "+C.accent+"40",borderRadius:"8px",textAlign:"center"}}><span style={{fontFamily:mono,fontSize:"22px",fontWeight:800,letterSpacing:"0.12em",color:C.accentLight}}>{matricula}</span></div>}</div><button onClick={()=>ok&&anim("review")} disabled={!ok} style={{...pbtn(ok),marginTop:"28px"}}>Revisar y confirmar <IconArrow/></button></div></div>);}
 
-  // ═══ REVIEW ═══
-  if(step==="review"){const now=new Date();const tipo=tipoProceso==="empaquetamiento"?"Empaquetamiento":"Transporte";const bultoName=selectedBulto?selectedBulto.name:"Bulto-001";const modoTxt=modoBulto==="nuevo"?"Bulto nuevo":"Ampliación";const recordNum=(selectedBulto?(currentBultos.find(b=>b.id===selectedBulto.id)?.records?.length||0)+1:1);const rows=[["Código",codigoInterno],["Proceso",tipo],["Bulto",bultoName+" ("+modoTxt+")"],["Opciones",opciones.map(o=>PHOTO_REQUIREMENTS[o].label).join(", ")],["Fotos",Object.keys(capturedPhotos).length+" capturadas"],["Usuario",usuario],["Transportista",transportista]];if(matricula)rows.push(["Matrícula",matricula]);rows.push(["Fecha",formatDate(now)],["Hora",formatTime(now)]);return(<div style={wrap}>{hdr("Revisión final",()=>anim("transportista"))}{stps(5,6)}<div style={{flex:1,padding:"24px 20px",paddingBottom:"120px"}}><div style={{background:C.surfaceLight,borderRadius:"14px",border:"1px solid "+C.border,overflow:"hidden"}}>{rows.map(([l,v],i)=><div key={i} style={{padding:"12px 16px",borderBottom:"1px solid "+C.border,display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}><span style={{fontSize:"13px",color:C.textMuted,minWidth:"90px"}}>{l}</span><span style={{fontSize:"13px",color:l==="Matrícula"?C.accentLight:l==="Bulto"?C.info:C.text,textAlign:"right",flex:1,marginLeft:"12px",fontFamily:(l==="Matrícula"||l==="Código")?mono:"inherit",fontWeight:(l==="Matrícula"||l==="Código"||l==="Bulto")?700:400}}>{v}</span></div>)}</div><div style={{marginTop:"16px"}}><p style={{fontSize:"12px",color:C.textDim,textTransform:"uppercase",letterSpacing:"0.05em",marginBottom:"10px"}}>Fotos capturadas</p><div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:"8px"}}>{photoQueue.map(item=><div key={item.key} style={{position:"relative",borderRadius:"8px",overflow:"hidden",aspectRatio:"4/3",background:C.surface,border:"1px solid "+C.border}}>{capturedPhotos[item.key]?<img src={capturedPhotos[item.key]} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:<div style={{display:"flex",alignItems:"center",justifyContent:"center",height:"100%",color:C.textDim}}><IconImage/></div>}<div style={{position:"absolute",bottom:0,left:0,right:0,background:"linear-gradient(transparent,rgba(0,0,0,.8))",padding:"4px 6px",fontSize:"9px",color:"rgba(255,255,255,.8)"}}>{item.label}</div></div>)}</div></div></div><div style={{position:"fixed",bottom:0,left:0,right:0,padding:"16px 20px",background:"linear-gradient(to top,"+C.bg+","+C.bg+"ee,transparent)"}}><button onClick={finalize} style={{...bb,width:"100%",padding:"16px",background:"linear-gradient(135deg,"+C.success+",#059669)",color:"#fff",fontSize:"16px",fontWeight:700,borderRadius:"12px",boxShadow:"0 4px 20px "+C.success+"44"}}><IconCloud/> Confirmar y subir a SharePoint</button></div></div>);}
+  if(step==="review"){const now=new Date();const tipo=tipoProceso==="empaquetamiento"?"Empaquetamiento":"Transporte";const bultoName=selectedBulto?selectedBulto.name:"Bulto-001";const modoTxt=modoBulto==="nuevo"?"Bulto nuevo":"Ampliación";const recordNum=(selectedBulto?(selectedBulto.records?.length||0)+1:1);const rows=[["Código",codigoInterno],["Proceso",tipo],["Bulto",bultoName+" ("+modoTxt+")"],["Opciones",opciones.map(o=>PHOTO_REQUIREMENTS[o].label).join(", ")],["Fotos",Object.keys(capturedPhotos).length+" capturadas"],["Usuario",usuario],["Transportista",transportista]];if(matricula)rows.push(["Matrícula",matricula]);rows.push(["Fecha",formatDate(now)],["Hora",formatTime(now)]);return(<div style={wrap}>{hdr("Revisión final",()=>anim("transportista"))}{stps(5,6)}<div style={{flex:1,padding:"24px 20px",paddingBottom:"120px"}}><div style={{background:C.surfaceLight,borderRadius:"14px",border:"1px solid "+C.border,overflow:"hidden"}}>{rows.map(([l,v],i)=><div key={i} style={{padding:"12px 16px",borderBottom:"1px solid "+C.border,display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}><span style={{fontSize:"13px",color:C.textMuted,minWidth:"90px"}}>{l}</span><span style={{fontSize:"13px",color:l==="Matrícula"?C.accentLight:l==="Bulto"?C.info:C.text,textAlign:"right",flex:1,marginLeft:"12px",fontFamily:(l==="Matrícula"||l==="Código")?mono:"inherit",fontWeight:(l==="Matrícula"||l==="Código"||l==="Bulto")?700:400}}>{v}</span></div>)}</div><div style={{marginTop:"16px"}}><p style={{fontSize:"12px",color:C.textDim,textTransform:"uppercase",letterSpacing:"0.05em",marginBottom:"10px"}}>Fotos capturadas</p><div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:"8px"}}>{photoQueue.map(item=><div key={item.key} style={{position:"relative",borderRadius:"8px",overflow:"hidden",aspectRatio:"4/3",background:C.surface,border:"1px solid "+C.border}}>{capturedPhotos[item.key]?<img src={capturedPhotos[item.key]} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>:<div style={{display:"flex",alignItems:"center",justifyContent:"center",height:"100%",color:C.textDim}}><IconImage/></div>}<div style={{position:"absolute",bottom:0,left:0,right:0,background:"linear-gradient(transparent,rgba(0,0,0,.8))",padding:"4px 6px",fontSize:"9px",color:"rgba(255,255,255,.8)"}}>{item.label}</div></div>)}</div></div></div><div style={{position:"fixed",bottom:0,left:0,right:0,padding:"16px 20px",background:"linear-gradient(to top,"+C.bg+","+C.bg+"ee,transparent)"}}><button onClick={finalize} style={{...bb,width:"100%",padding:"16px",background:"linear-gradient(135deg,"+C.success+",#059669)",color:"#fff",fontSize:"16px",fontWeight:700,borderRadius:"12px",boxShadow:"0 4px 20px "+C.success+"44"}}><IconCloud/> Confirmar y subir a SharePoint</button></div></div>);}
 
-  // ═══ SUMMARY ═══
-  if(step==="summary"){const s=completedSessions[0];if(!s)return null;const modoTxt=s.modoBulto==="nuevo"?"Bulto nuevo creado":"Información ampliada";return(<div style={wrap}>{hdr("Registro completado",null)}<div style={{flex:1,padding:"24px 20px"}}>
-
-  {/* Upload status banner */}
-  <UploadBanner/>
-
-  <div style={{textAlign:"center",marginBottom:"28px"}}><div style={{width:"80px",height:"80px",borderRadius:"50%",background:uploadStatus==="ok"?C.success+"15":uploadStatus==="error"?C.danger+"15":C.info+"15",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 16px",border:"3px solid "+(uploadStatus==="ok"?C.success:uploadStatus==="error"?C.danger:C.info)}}>{uploadStatus==="uploading"?<IconSpinner/>:uploadStatus==="ok"?<svg width="40" height="40" fill="none" stroke={C.success} strokeWidth="2.5" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>:uploadStatus==="error"?<div style={{color:C.danger}}><IconAlert/></div>:<IconSpinner/>}</div><h2 style={{margin:"0 0 4px",fontSize:"20px",fontWeight:800}}>{uploadStatus==="ok"?"Guardado en SharePoint":uploadStatus==="error"?"Error al subir":"Subiendo..."}</h2><p style={{margin:0,color:C.textMuted,fontSize:"14px"}}>{s.codigoInterno} — {s.bultoName}</p><div style={{marginTop:"8px",display:"inline-block",padding:"4px 12px",borderRadius:"20px",fontSize:"12px",fontWeight:600,background:s.modoBulto==="nuevo"?C.accent+"20":C.info+"20",color:s.modoBulto==="nuevo"?C.accentLight:C.info}}>{modoTxt}</div></div>
-
-  <div style={{background:C.surfaceLight,borderRadius:"14px",border:"1px solid "+C.border,padding:"16px"}}><div style={{fontSize:"11px",color:C.textDim,textTransform:"uppercase",letterSpacing:"0.05em",marginBottom:"12px"}}>Datos del registro</div><div style={{fontFamily:mono,fontSize:"12px",lineHeight:2,color:C.textMuted}}><div><span style={{color:C.textDim}}>código:</span> <span style={{color:C.accentLight}}>{s.codigoInterno}</span></div><div><span style={{color:C.textDim}}>bulto:</span> <span style={{color:C.info,fontWeight:700}}>{s.bultoName}</span></div><div><span style={{color:C.textDim}}>proceso:</span> <span style={{color:C.text}}>{s.tipoProceso}</span></div><div><span style={{color:C.textDim}}>opciones:</span> <span style={{color:C.text}}>{s.opciones.join(", ")}</span></div><div><span style={{color:C.textDim}}>fotos:</span> <span style={{color:C.text}}>{Object.keys(s.photos).length}</span></div><div><span style={{color:C.textDim}}>usuario:</span> <span style={{color:C.text}}>{s.usuario}</span></div><div><span style={{color:C.textDim}}>transportista:</span> <span style={{color:C.text}}>{s.transportista}</span></div>{s.matricula&&<div><span style={{color:C.textDim}}>matrícula:</span> <span style={{color:C.accentLight,fontWeight:700,letterSpacing:"0.08em"}}>{s.matricula}</span></div>}<div><span style={{color:C.textDim}}>fecha:</span> <span style={{color:C.text}}>{s.fecha} {s.hora}</span></div></div></div>
-
-  <div style={{marginTop:"16px",padding:"14px 16px",background:C.surfaceLight,borderRadius:"10px",border:"1px solid "+C.border}}><div style={{fontSize:"11px",color:C.textDim,textTransform:"uppercase",letterSpacing:"0.05em",marginBottom:"6px"}}>Ruta en SharePoint</div><div style={{fontFamily:mono,fontSize:"11px",color:C.accentLight,wordBreak:"break-all"}}>{s.folderPath}</div></div>
-
-  <button onClick={()=>descargarInforme(s)} style={{...bb,width:"100%",marginTop:"20px",padding:"14px",background:C.danger+"15",border:"2px solid "+C.danger+"40",color:C.danger,fontSize:"15px",borderRadius:"12px"}}><IconDownload/> Descargar copia local</button>
-  <button onClick={resetToGestion} style={{...bb,width:"100%",marginTop:"12px",padding:"14px",background:C.info+"15",border:"2px solid "+C.info+"40",color:C.info,fontSize:"15px",borderRadius:"12px"}}><IconFolder/> Seguir con {s.codigoInterno}</button>
-  <button onClick={resetAll} style={{...bb,width:"100%",marginTop:"10px",padding:"16px",background:"linear-gradient(135deg,"+C.accent+","+C.accentDark+")",color:"#000",fontSize:"16px",fontWeight:700,borderRadius:"12px"}}><IconRefresh/> Nuevo pedido</button>
-  </div></div>);}
+  if(step==="summary"){const s=completedSessions[0];if(!s)return null;const modoTxt=s.modoBulto==="nuevo"?"Bulto nuevo creado":"Información ampliada";return(<div style={wrap}>{hdr("Registro completado",null)}<div style={{flex:1,padding:"24px 20px"}}><UploadBanner/><div style={{textAlign:"center",marginBottom:"28px"}}><div style={{width:"80px",height:"80px",borderRadius:"50%",background:uploadStatus==="ok"?C.success+"15":uploadStatus==="error"?C.danger+"15":C.info+"15",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 16px",border:"3px solid "+(uploadStatus==="ok"?C.success:uploadStatus==="error"?C.danger:C.info)}}>{uploadStatus==="uploading"?<IconSpinner/>:uploadStatus==="ok"?<svg width="40" height="40" fill="none" stroke={C.success} strokeWidth="2.5" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>:uploadStatus==="error"?<div style={{color:C.danger}}><IconAlert/></div>:<IconSpinner/>}</div><h2 style={{margin:"0 0 4px",fontSize:"20px",fontWeight:800}}>{uploadStatus==="ok"?"Guardado en SharePoint":uploadStatus==="error"?"Error al subir":"Subiendo..."}</h2><p style={{margin:0,color:C.textMuted,fontSize:"14px"}}>{s.codigoInterno} — {s.bultoName}</p><div style={{marginTop:"8px",display:"inline-block",padding:"4px 12px",borderRadius:"20px",fontSize:"12px",fontWeight:600,background:s.modoBulto==="nuevo"?C.accent+"20":C.info+"20",color:s.modoBulto==="nuevo"?C.accentLight:C.info}}>{modoTxt}</div></div><div style={{background:C.surfaceLight,borderRadius:"14px",border:"1px solid "+C.border,padding:"16px"}}><div style={{fontFamily:mono,fontSize:"12px",lineHeight:2,color:C.textMuted}}><div><span style={{color:C.textDim}}>código:</span> <span style={{color:C.accentLight}}>{s.codigoInterno}</span></div><div><span style={{color:C.textDim}}>bulto:</span> <span style={{color:C.info,fontWeight:700}}>{s.bultoName}</span></div><div><span style={{color:C.textDim}}>proceso:</span> <span style={{color:C.text}}>{s.tipoProceso}</span></div><div><span style={{color:C.textDim}}>usuario:</span> <span style={{color:C.text}}>{s.usuario}</span></div><div><span style={{color:C.textDim}}>transportista:</span> <span style={{color:C.text}}>{s.transportista}</span></div>{s.matricula&&<div><span style={{color:C.textDim}}>matrícula:</span> <span style={{color:C.accentLight,fontWeight:700}}>{s.matricula}</span></div>}<div><span style={{color:C.textDim}}>fecha:</span> <span style={{color:C.text}}>{s.fecha} {s.hora}</span></div></div></div><button onClick={()=>descargarInforme(s)} style={{...bb,width:"100%",marginTop:"20px",padding:"14px",background:C.danger+"15",border:"2px solid "+C.danger+"40",color:C.danger,fontSize:"15px",borderRadius:"12px"}}><IconDownload/> Descargar copia local</button><button onClick={resetToGestion} style={{...bb,width:"100%",marginTop:"12px",padding:"14px",background:C.info+"15",border:"2px solid "+C.info+"40",color:C.info,fontSize:"15px",borderRadius:"12px"}}><IconFolder/> Seguir con {s.codigoInterno}</button><button onClick={resetAll} style={{...bb,width:"100%",marginTop:"10px",padding:"16px",background:"linear-gradient(135deg,"+C.accent+","+C.accentDark+")",color:"#000",fontSize:"16px",fontWeight:700,borderRadius:"12px"}}><IconRefresh/> Nuevo pedido</button></div></div>);}
 
   return null;
 }
-
 ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
 </script>
 </body>
